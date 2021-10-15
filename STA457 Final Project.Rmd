@@ -1,0 +1,59 @@
+---
+title: "STA457 Final Project R Code"
+author: "Peiyu Li"
+date: "05/04/2021"
+output: pdf_document
+---
+
+## Plotting and Transformation
+```{r}
+library(astsa)
+data("gtemp_ocean")
+# plot the global ocean temperature data
+plot(gtemp_ocean,main="Figure 1: Global Mean Ocean Temperature", ylab="Temperature",xlab="Year")
+# detrended the data
+gtemp_ocean_diff=diff(gtemp_ocean)
+# plot the detrended data
+plot(gtemp_ocean_diff,main="Figure 2: Detrended of Ocean temperature", ylab="Temperature",xlab="Year")
+```
+
+## identifying the dependence orders 
+```{r}
+#Plot the ACF and PACF for differenced data to find the order of p and q.
+acf2(gtemp_ocean_diff, main ="Figure 3: ACF and PACF Plots",max.lag =50)
+```
+
+## parameter estimation,  diagnostics, model choice
+```{r}
+# fit the two proposed models
+model1=sarima(gtemp_ocean, 2, 1, 0) # AR(2)
+knitr::kable(model1$ttable, caption = "t-table for ARIMA(2,1,0)")
+model2=sarima(gtemp_ocean, 2, 1, 2) # ARMA(2),2
+knitr::kable(model2$ttable, caption = "t-table for ARIMA(2,1,2)")
+```
+## forecast
+The prediction plot and the values are:\
+```{r}
+# predict 10 futrue years
+pred1=sarima.for(gtemp_ocean,10,2,1,0) 
+# calculate the confidence interval
+U = pred1$pred+qnorm(.975)*pred1$se
+L= pred1$pred-qnorm(.975)*pred1$se
+year <- 2018:2027
+PI <- data.frame("Year" = year,"Prediction"=pred1$pred,"Lower Bound"=U,"Upper Bound"=L)
+knitr::kable(PI, caption = "95% Prediction Interval")
+```
+## identify the dominant frequencies 
+```{r}
+ocean.per = mvspec(gtemp_ocean , log = "no")
+p <- ocean.per$details[order(ocean.per$details[,3],decreasing=TRUE),][1:3,]
+upper1=2*p[1,3]/qchisq(.025 ,2)
+upper2=2*p[2,3]/qchisq(.025 ,2)
+upper3=2*p[3,3]/qchisq(.025 ,2)
+lower1=2*p[1,3]/qchisq(.975 ,2)
+lower2=2*p[2,3]/qchisq(.975 ,2)
+lower3=2*p[3,3]/qchisq(.975 ,2)
+final <- data.frame(p, "Lower"=c(lower1, lower2,lower3),"Upper" = c(upper1,upper2,upper3))
+knitr::kable(final, caption = "The First 3 Dominant Frequency and CI")
+```
+
